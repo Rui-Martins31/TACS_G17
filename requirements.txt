@@ -1,0 +1,4 @@
+besser @ git+https://github.com/jacomecunha/BESSER.git
+bocl
+qiskit
+qiskit-aer
