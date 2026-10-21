@@ -12,11 +12,11 @@ Problem D3: choose the subset of non-conflicting activities with maximum total v
 
 ## Group
 
-| Student number | Name | GitHub |
-|---|---|---|
-| | | |
-| | | |
-| | | |
+| Student number | Name          | GitHub     |
+| -------------- | ------------- | ---------- |
+| 202207410      | Lucas Alfonsi | Lucasalf21 |
+|                |               |            |
+|                |               |            |
 
 ## Setup
 
