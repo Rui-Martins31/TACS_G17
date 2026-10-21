@@ -60,7 +60,24 @@ a constraint is either the root of a problem or a child of another constraint, n
 The constraint structure is an acyclic tree. An absent root means there are no constraints;
 a single atom needs no logical wrapper. All expressions refer only to variables declared in
 the same ILPProblem. Variable names must be unique within a problem and bit widths positive.
-These are rules to capture in the metamodel and OCL.
+These rules are represented in [the B-UML metamodel](../../metamodels/solution_dsl.py)
+and its OCL constraints. `ConstraintExpression` cannot be instantiated directly.
+
+OCL constraints (the installed B-OCL version fails to parse or evaluate the ones marked *,
+which are checked by an equivalent Python function in
+[metamodels/solution_checks.py](../../metamodels/solution_checks.py)):
+
+| Name | Context | Rule |
+|---|---|---|
+| positiveBitWidth | IntegerVariable | `bitWidth > 0` |
+| uniqueVariableNames * | ILPProblem | variable names unique within the problem |
+| expressionOwner | LinearExpression | an expression belongs either to a problem as its objective or to a linear constraint, but not both |
+| constraintOwner * | ConstraintExpression | a constraint belongs either to a problem as its root or to a logical parent, but not both |
+| acyclicConstraints * | ConstraintExpression | no constraint is its own ancestor |
+| concreteConstraints * | ConstraintExpression | no direct instance of the abstract ConstraintExpression class |
+| variablesWithinProblem * | LinearExpression | every term references a variable declared in the expression's problem |
+
+Multiplicity and enumeration checks are performed by `ObjectModel.validate()`.
 
 The objective always means minimisation, so no objective-direction attribute is needed.
 For D3, each activity contributes a one-bit variable and a term with coefficient `-value`.
