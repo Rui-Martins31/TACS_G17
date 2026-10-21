@@ -2,7 +2,7 @@ import sys
 
 from besser.BUML.metamodel.object.builder import ObjectBuilder
 
-from metamodels.checks import PYTHON_EQUIVALENTS, check_model
+from metamodels.problem_checks import PYTHON_EQUIVALENTS, check_model
 from metamodels.problem_dsl import (
     BOCL_UNSUPPORTED, Activity, ActivityPlan, Conflict, Resource, problem_dsl,
 )

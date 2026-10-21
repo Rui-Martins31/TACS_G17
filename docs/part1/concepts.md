@@ -20,7 +20,7 @@ resource, or when the modeller declares an explicit conflict. Metamodel:
 | Derived conflict (not a class; computed by T1) | | two activities sharing a resource with overlapping `[start, end)` | atom `y_i + y_j − 1 ≤ 0` (once per pair, merged with explicit ones) | Annex A, D3 row; own design |
 
 OCL constraints (all standard OCL; B-OCL cannot evaluate the ones marked *, which are
-checked by an equivalent Python function in [metamodels/checks.py](../../metamodels/checks.py)):
+checked by an equivalent Python function in [metamodels/problem_checks.py](../../metamodels/problem_checks.py)):
 
 | Name | Context | Rule |
 |---|---|---|

@@ -1,5 +1,5 @@
 """Python equivalents for the Solution DSL's collection/closure invariants."""
-from metamodels.checks import check_model, linked, objects_of
+from metamodels.problem_checks import check_model, linked, objects_of
 from metamodels.solution_dsl import BOCL_UNSUPPORTED, solution_dsl
 
 
