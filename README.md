@@ -6,6 +6,25 @@ we define the problem DSL and a bounded integer linear programming (ILP) DSL.
 In Part II, we will implement the chain from problem to ILP to quantum circuit and
 Qiskit code, using Grover Adaptive Search.
 
+We chose event programmes because each activity has a value, while conflicts limit
+which activities can be included together. We keep activity times fixed so that
+the problem focuses on selection. Rooms, speakers and equipment are shared resources,
+and activities conflict when they overlap and need the same resource. Explicit conflicts
+cover other restrictions, such as activities intended for the same audience.
+
+The metamodel should reflect what event organisers need to describe and how they
+work. We use familiar concepts such as activities, rooms and speakers to reduce
+the effort of expressing an event's requirements. Our aim is to make the tool
+easier to learn and use, including for organisers with no knowledge of quantum
+computing, and give them a reason to adopt it in their work.
+
+Separating the Problem DSL from the Solution DSL keeps these event concepts
+independent of their mathematical formulation. Following Annex A, classes C/D,
+the Solution DSL uses bounded integer variables, linear constraints and a
+minimisation objective. Together, the two languages provide the basis for a
+translation from the organiser's description to the quantum program, which we
+will implement in Part II.
+
 | Student number | Name              | GitHub        |
 | -------------- | ----------------- | ------------- |
 | 202207410      | Lucas Branquinho  | Lucasalf21    |
@@ -16,8 +35,7 @@ Qiskit code, using Grover Adaptive Search.
 
 ![Problem DSL metamodel with associations and OCL constraints](diagrams/problem_DSL.png)
 
-We use an event programme as the domain. Each activity has a fixed time, value and
-set of resources, and we choose which activities to include. The table summarises
+The table summarises
 the classes in the [B-UML metamodel](metamodels/problem_dsl.py) and
 [diagram](diagrams/problem_DSL.png); the [full concept list](docs/part1/concepts.md#problem-dsl)
 also includes the ILP mappings and references. Ownership is represented by composition.
@@ -29,11 +47,9 @@ also includes the ILP mappings and references. Ownership is represented by compo
 | Resource | name: str; kind: ResourceKind | Belongs to 1 plan; used by 0..* activities |
 | Conflict | reason: str | Belongs to 1 plan; references exactly 1 left and 1 right activity |
 
-`ResourceKind = {ROOM, PERSON, EQUIPMENT}`. Activities conflict when their half-open
-intervals `[start, end)` overlap and they share a resource, or when an explicit
-conflict is declared. Back-to-back activities therefore do not overlap. Explicit
-conflicts also capture restrictions such as a shared audience. Mandatory activities
-must be selected. We allow conflicts between mandatory activities so that a valid
+`ResourceKind = {ROOM, PERSON, EQUIPMENT}`. We use half-open intervals `[start, end)`
+so that back-to-back activities do not overlap. Mandatory activities must be selected.
+We allow conflicts between mandatory activities so that a valid
 problem model can describe an instance with no feasible solution.
 
 The OCL rules add restrictions beyond the associations. `positiveValue` requires `value > 0`; `validInterval` requires
@@ -46,8 +62,7 @@ and `resourcesWithinPlan` forbid cross-plan references.
 
 ![Solution DSL metamodel with associations and OCL constraints](diagrams/solution_DSL.png)
 
-We base the Solution DSL on the class C/D formulation in Annex A of the assignment.
-Its [B-UML metamodel](metamodels/solution_dsl.py) and [diagram](diagrams/solution_DSL.png)
+The [B-UML metamodel](metamodels/solution_dsl.py) and [diagram](diagrams/solution_DSL.png)
 describe the variables, constraints and objective of an optimisation problem.
 
 | Concept | Attributes | Associations |
