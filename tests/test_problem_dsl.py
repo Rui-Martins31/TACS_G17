@@ -2,7 +2,7 @@ import sys
 
 from besser.BUML.metamodel.object.builder import ObjectBuilder
 
-from metamodels.checks import check_model
+from metamodels.checks import PYTHON_EQUIVALENTS, check_model
 from metamodels.problem_dsl import (
     BOCL_UNSUPPORTED, Activity, ActivityPlan, Conflict, Resource, problem_dsl,
 )
@@ -79,6 +79,27 @@ BROKEN_VARIANTS = [
 ]
 
 
+def malformed_model(end, count):
+    """Build invalid links directly, avoiding stale reverse links from reassignment."""
+    om = build()
+    add_second_plan(om)
+    if end == "plan":
+        obj = ObjectBuilder(Activity).name("malformed").attributes(
+            name="Malformed", value=1, start=0, end=1, mandatory=False).build()
+        obj.plan = set() if count == 0 else {find(om, "plan"), find(om, "other")}
+    else:
+        obj = ObjectBuilder(Conflict).name("malformed").attributes(reason="test").build()
+        targets = {
+            "left": [find(om, "a"), find(om, "b")],
+            "right": [find(om, "c"), find(om, "d")],
+            "conflictPlan": [find(om, "plan"), find(om, "other")],
+        }
+        for role, objects in targets.items():
+            setattr(obj, role, set(objects[:count if role == end else 1]))
+    om.add_object(obj)
+    return om
+
+
 def run():
     failures = []
 
@@ -100,11 +121,30 @@ def run():
         if not ok:
             failures.append(f"{mutate.__name__}: expected only {target} to fail, got {failed}")
 
+    print("\nMalformed models (structural failure, no exception)")
+    for end in ("left", "right", "conflictPlan", "plan"):
+        for count in (0, 2):
+            om = malformed_model(end, count)
+            results = check_model(problem_dsl, om, BOCL_UNSUPPORTED)
+            ok = bool(results) and all(
+                r.constraint == "structure" and r.engine == "BESSER" and r.holds is False
+                for r in results)
+            ok = ok and any(f"association end '{end}'" in r.detail for r in results)
+            # Check helpers directly too, since structural validation normally skips them.
+            targets = ["resourcesWithinPlan"] if end == "plan" else ["conflictWithinPlan"]
+            if end in {"left", "right"}:
+                targets.append("noDuplicateConflicts")
+            helper_results = [PYTHON_EQUIVALENTS[target](om) for target in targets]
+            ok = ok and all(result is False for result in helper_results)
+            print(f"  {'OK  ' if ok else 'FAIL'} {end} with {count} links")
+            if not ok:
+                failures.append(f"{end} with {count} links: {results}; helpers: {helper_results}")
+
     print()
     if failures:
         print("FAILURES:\n  " + "\n  ".join(failures))
         return 1
-    print(f"All checks passed ({len(BROKEN_VARIANTS)} broken variants detected).")
+    print(f"All checks passed ({len(BROKEN_VARIANTS)} broken variants and 8 malformed models detected).")
     return 0
 
 
