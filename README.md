@@ -14,6 +14,8 @@ Qiskit code, using Grover Adaptive Search.
 
 ## 1. Problem DSL
 
+![Problem DSL metamodel with associations and OCL constraints](diagrams/problem_DSL.png)
+
 We use an event programme as the domain. Each activity has a fixed time, value and
 set of resources, and we choose which activities to include. The table summarises
 the classes in the [B-UML metamodel](metamodels/problem_dsl.py) and
@@ -41,6 +43,8 @@ The OCL rules add restrictions beyond the associations. `positiveValue` requires
 and `resourcesWithinPlan` forbid cross-plan references.
 
 ## 2. Solution DSL
+
+![Solution DSL metamodel with associations and OCL constraints](diagrams/solution_DSL.png)
 
 We base the Solution DSL on the class C/D formulation in Annex A of the assignment.
 Its [B-UML metamodel](metamodels/solution_dsl.py) and [diagram](diagrams/solution_DSL.png)
