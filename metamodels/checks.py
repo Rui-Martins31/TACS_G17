@@ -7,7 +7,7 @@ from bocl.OCLWrapper import OCLWrapper
 class CheckResult:
     constraint: str
     holds: bool | None  # None when the check could not be evaluated
-    engine: str         # "B-OCL" or "Python"
+    engine: str         # "BESSER", "B-OCL" or "Python"
     detail: str = ""
 
 
@@ -38,8 +38,12 @@ def _unique_resource_names(om):
 
 def _no_duplicate_conflicts(om):
     for plan in objects_of(om, "ActivityPlan"):
-        pairs = [frozenset((id(linked(c, "left")[0]), id(linked(c, "right")[0])))
-                 for c in linked(plan, "conflicts")]
+        pairs = []
+        for conflict in linked(plan, "conflicts"):
+            left, right = linked(conflict, "left"), linked(conflict, "right")
+            if len(left) != 1 or len(right) != 1:
+                return False
+            pairs.append(frozenset((id(left[0]), id(right[0]))))
         if not _all_unique(pairs):
             return False
     return True
@@ -47,8 +51,12 @@ def _no_duplicate_conflicts(om):
 
 def _conflict_within_plan(om):
     for conflict in objects_of(om, "Conflict"):
-        plan_activities = linked(linked(conflict, "conflictPlan")[0], "activities")
-        ends = linked(conflict, "left") + linked(conflict, "right")
+        plans = linked(conflict, "conflictPlan")
+        left, right = linked(conflict, "left"), linked(conflict, "right")
+        if len(plans) != 1 or len(left) != 1 or len(right) != 1:
+            return False
+        plan_activities = linked(plans[0], "activities")
+        ends = left + right
         if not all(any(e is a for a in plan_activities) for e in ends):
             return False
     return True
@@ -56,7 +64,10 @@ def _conflict_within_plan(om):
 
 def _resources_within_plan(om):
     for activity in objects_of(om, "Activity"):
-        plan_resources = linked(linked(activity, "plan")[0], "resources")
+        plans = linked(activity, "plan")
+        if len(plans) != 1:
+            return False
+        plan_resources = linked(plans[0], "resources")
         if not all(any(r is pr for pr in plan_resources) for r in linked(activity, "uses")):
             return False
     return True
@@ -72,7 +83,11 @@ PYTHON_EQUIVALENTS = {
 
 
 def check_model(domain_model, object_model, bocl_unsupported, python_equivalents=None):
-    """Evaluate every constraint of domain_model on object_model, sorted by name."""
+    """Validate structure first; evaluate domain constraints only for a valid structure."""
+    validation = object_model.validate(raise_exception=False)
+    if not validation["success"]:
+        return [CheckResult("structure", False, "BESSER", error)
+                for error in validation["errors"]]
     wrapper = OCLWrapper(domain_model, object_model)
     equivalents = PYTHON_EQUIVALENTS if python_equivalents is None else python_equivalents
     results = []

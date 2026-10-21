@@ -29,8 +29,11 @@ pip install -r requirements.txt
 ## Checking the metamodels
 
 ```bash
-python -m tests.test_problem_dsl   # OCL checks on the tiny example + 8 broken variants
+python -m tests.test_problem_dsl   # Valid example, 8 broken variants and 8 malformed models
 ```
+
+The checker reports BESSER structural errors before evaluating domain constraints.
+This test module uses `run()`; execute it with the command above, not unittest discovery.
 
 ## Repository layout
 
