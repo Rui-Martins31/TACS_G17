@@ -12,7 +12,7 @@ from itertools import product
 from besser.BUML.metamodel.object import ObjectModel
 from besser.BUML.metamodel.object.builder import ObjectBuilder
 
-from metamodels.checks import linked
+from metamodels.problem_checks import linked
 from metamodels.solution_checks import check_solution_model
 from metamodels.solution_dsl import (
     ILPProblem, IntegerVariable, LinearExpression, LinearTerm,
@@ -137,26 +137,28 @@ class TestSolutionDSL(unittest.TestCase):
         self.assert_failed_invariants({'constraintOwner'})
 
     def test_expression_has_two_owners(self):
-        # Use the objective as an atom expression too. Remove the displaced
-        # expression and its terms so no unrelated orphan errors are introduced.
-        old_expr = self.objects['conflict_AB_expr']
-        old_terms = linked(old_expr, 'terms')
-        self.objects['conflict_AB'].linearExpression = self.objects['objective']
-        old_expr.terms = set()
-        for term in old_terms:
-            term.variable = set()
-            self.om.objects.remove(term)
-        self.om.objects.remove(old_expr)
+        # Add links once: reassignment can leave stale reverse links in BESSER.
+        atom = (ObjectBuilder(LinearConstraint).name('extra_atom').attributes(comparison='LE')
+                .link(self.objects['objective'], 'linearExpression')
+                .link(self.objects['all_conflicts'], 'parent').build())
+        self.om.add_object(atom)
+        self.assert_structurally_valid()
         self.assert_failed_invariants({'expressionOwner'})
 
     def test_orphan_constraint(self):
-        orphan = ObjectBuilder(LogicalConstraint).name('orphan').attributes(operator='AND').build()
+        expression = ObjectBuilder(LinearExpression).name('orphan_expr').attributes(constant=0).build()
+        orphan = (ObjectBuilder(LinearConstraint).name('orphan').attributes(comparison='EQ')
+                  .link(expression, 'linearExpression').build())
+        self.om.add_object(expression)
         self.om.add_object(orphan)
-        self.assert_failed_invariants({'constraintOwner'})
+        self.assert_structurally_valid()
+        # Its expression also has no enclosing problem in which to resolve variables.
+        self.assert_failed_invariants({'constraintOwner', 'variablesWithinProblem'})
 
     def test_cycle(self):
         root = self.objects['all_conflicts']
-        root.operands = set(linked(root, 'operands')) | {root}
+        root.parent = root
+        self.assert_structurally_valid()
         self.assert_failed_invariants({'acyclicConstraints', 'constraintOwner'})
 
     def test_foreign_variable(self):
