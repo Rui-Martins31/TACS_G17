@@ -43,9 +43,48 @@ Design notes to discuss in the report:
 
 ## Solution DSL (0/1 ILP)
 
-| Concept | Intrinsic properties | Extrinsic properties |
+A solution model represents a bounded integer optimisation problem: integer variables with explicit bit widths, linear constraints combined using AND/OR, and a linear objective to minimise. For our activity-selection problem, each variable uses one bit: 1 means the activity is selected, and 0 means it is omitted. Maximising the total activity value is expressed by minimising its negative. The table below defines the concepts, attributes and associations of this language.
+
+| Concept | Intrinsic properties | Extrinsic properties | Reference |
+|---|---|---|---|
+| ILPProblem | name: str | owns 1..* IntegerVariables, exactly 1 LinearExpression as objective, and 0..1 ConstraintExpression as the root constraint (composition) | Annex A, class D: variables, constraints and minimisation objective |
+| IntegerVariable | name: str, bitWidth: int | belongs to exactly 1 ILPProblem; referenced by 0..* LinearTerms | Annex A, class C: an unsigned variable with `w` bits ranges from `0` to `2^w - 1`; D3 uses `w = 1` |
+| LinearExpression | constant: int | owns 0..* LinearTerms (composition); belongs to exactly 1 owner, either an ILPProblem as its objective or a LinearConstraint as its expression | Annex A, classes C/D: `a_0 + sum(a_i * y_i)` |
+| LinearTerm | coefficient: int | belongs to exactly 1 LinearExpression; references exactly 1 IntegerVariable | Annex A, classes C/D: integer coefficient multiplied by a variable |
+| ConstraintExpression (abstract) | none | belongs to exactly 1 owner, either an ILPProblem as its root constraint or a LogicalConstraint as an operand | Own structure for the constraint formulas defined in Annex A, class C |
+| LinearConstraint (extends ConstraintExpression) | comparison: ComparisonKind {EQ, LE} | owns exactly 1 LinearExpression (composition); inherits constraint ownership | Annex A, class C: an atom compares a linear expression with zero using `=` or `<=` |
+| LogicalConstraint (extends ConstraintExpression) | operator: LogicalOperator {AND, OR} | owns 2..* ConstraintExpressions as operands (composition); inherits constraint ownership | Annex A, class C: atoms combined with conjunction/disjunction |
+
+`ComparisonKind` and `LogicalOperator` are enumerations. Inherited ownership is exclusive:
+a constraint is either the root of a problem or a child of another constraint, never both.
+The constraint structure is an acyclic tree. An absent root means there are no constraints;
+a single atom needs no logical wrapper. All expressions refer only to variables declared in
+the same ILPProblem. Variable names must be unique within a problem and bit widths positive.
+These rules are represented in [the B-UML metamodel](../../metamodels/solution_dsl.py)
+and its OCL constraints. `ConstraintExpression` cannot be instantiated directly.
+
+OCL constraints (the installed B-OCL version fails to parse or evaluate the ones marked *,
+which are checked by an equivalent Python function in
+[metamodels/solution_checks.py](../../metamodels/solution_checks.py)):
+
+| Name | Context | Rule |
 |---|---|---|
-| | | |
+| positiveBitWidth | IntegerVariable | `bitWidth > 0` |
+| uniqueVariableNames * | ILPProblem | variable names unique within the problem |
+| expressionOwner | LinearExpression | an expression belongs either to a problem as its objective or to a linear constraint, but not both |
+| constraintOwner * | ConstraintExpression | a constraint belongs either to a problem as its root or to a logical parent, but not both |
+| acyclicConstraints * | ConstraintExpression | no constraint is its own ancestor |
+| concreteConstraints * | ConstraintExpression | no direct instance of the abstract ConstraintExpression class |
+| variablesWithinProblem * | LinearExpression | every term references a variable declared in the expression's problem |
+
+Multiplicity and enumeration checks are performed by `ObjectModel.validate()`.
+
+The objective always means minimisation, so no objective-direction attribute is needed.
+For D3, each activity contributes a one-bit variable and a term with coefficient `-value`.
+Each conflict becomes `y_i + y_j - 1 <= 0`, and each mandatory activity becomes
+`1 - y_i = 0`; combine these atoms with AND. Resources and times determine which conflict
+atoms are needed, but do not become separate ILP concepts. A solution model describes this
+optimisation problem, not an assignment of values to its variables.
 
 ## Solver configuration
 

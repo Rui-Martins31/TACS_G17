@@ -71,14 +71,15 @@ PYTHON_EQUIVALENTS = {
 }
 
 
-def check_model(domain_model, object_model, bocl_unsupported):
+def check_model(domain_model, object_model, bocl_unsupported, python_equivalents=None):
     """Evaluate every constraint of domain_model on object_model, sorted by name."""
     wrapper = OCLWrapper(domain_model, object_model)
+    equivalents = PYTHON_EQUIVALENTS if python_equivalents is None else python_equivalents
     results = []
     for constraint in sorted(domain_model.constraints, key=lambda c: c.name):
         if constraint.name in bocl_unsupported:
             results.append(CheckResult(constraint.name,
-                                       PYTHON_EQUIVALENTS[constraint.name](object_model),
+                                       equivalents[constraint.name](object_model),
                                        "Python"))
             continue
         try:
