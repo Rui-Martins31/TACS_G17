@@ -96,7 +96,7 @@ A problem without a root constraint has no constraints.
 
 ## 3. Hand-built models and validation
 
-The [problem example](models/examples/tiny_conference.py) contains four activities
+The [problem example](models/instances/tiny_conference.py) contains four activities
 A–D with values 3, 2, 4 and 1. A–B and B–C conflict because they overlap and use the
 same room; C–D has an explicit conflict. We build the corresponding BESSER solution object model by hand in
 `build_solution_example()` in [the Solution DSL tests](tests/test_solution_dsl.py):

@@ -82,6 +82,11 @@ PYTHON_EQUIVALENTS = {
 }
 
 
+def _has_instances(object_model, context_class):
+    return any(o.classifier is context_class or context_class in o.classifier.all_parents()
+               for o in object_model.objects)
+
+
 def check_model(domain_model, object_model, bocl_unsupported, python_equivalents=None):
     """Validate structure first; evaluate domain constraints only for a valid structure."""
     validation = object_model.validate(raise_exception=False)
@@ -96,6 +101,12 @@ def check_model(domain_model, object_model, bocl_unsupported, python_equivalents
             results.append(CheckResult(constraint.name,
                                        equivalents[constraint.name](object_model),
                                        "Python"))
+            continue
+        if not _has_instances(object_model, constraint.context):
+            # An invariant quantifies over the context's instances, so it holds vacuously.
+            # B-OCL crashes ("invalid syntax") instead, e.g. distinctEnds on a plan without
+            # explicit conflicts.
+            results.append(CheckResult(constraint.name, True, "B-OCL", "no instances of context"))
             continue
         try:
             results.append(CheckResult(constraint.name, bool(wrapper.evaluate(constraint)), "B-OCL"))

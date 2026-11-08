@@ -6,7 +6,7 @@ from metamodels.problem_checks import PYTHON_EQUIVALENTS, check_model
 from metamodels.problem_dsl import (
     BOCL_UNSUPPORTED, Activity, ActivityPlan, Conflict, Resource, problem_dsl,
 )
-from models.examples.tiny_conference import build
+from models.instances.tiny_conference import build
 
 
 def find(object_model, object_name):
