@@ -107,8 +107,8 @@ Subject to A+B-1 <= 0, B+C-1 <= 0, C+D-1 <= 0
 ```
 
 The test evaluates all 16 assignments and finds the unique optimum `{A, C}`,
-with value 7 (objective −7). The transformation between the two models remains
-Part II work.
+with value 7 (objective −7). The Part II T1 transformation is now implemented; see
+the [API, ordering contract and checks](docs/part2/t1.md).
 
 The shared checker first calls `ObjectModel.validate()` for structural errors,
 including multiplicities and enumeration values. It then evaluates invariants.

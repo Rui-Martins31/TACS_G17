@@ -102,11 +102,11 @@ def check_model(domain_model, object_model, bocl_unsupported, python_equivalents
                                        equivalents[constraint.name](object_model),
                                        "Python"))
             continue
-        if not _has_instances(object_model, constraint.context):
-            # An invariant quantifies over the context's instances, so it holds vacuously.
-            # B-OCL crashes ("invalid syntax") instead, e.g. distinctEnds on a plan without
-            # explicit conflicts.
-            results.append(CheckResult(constraint.name, True, "B-OCL", "no instances of context"))
+        # B-OCL emits an empty expression for an invariant with no context instances.
+        if not any(o.classifier == constraint.context or
+                   constraint.context in o.classifier.all_parents()
+                   for o in object_model.objects):
+            results.append(CheckResult(constraint.name, True, "Python", "No context instances"))
             continue
         try:
             results.append(CheckResult(constraint.name, bool(wrapper.evaluate(constraint)), "B-OCL"))
