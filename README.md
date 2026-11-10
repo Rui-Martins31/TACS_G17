@@ -110,6 +110,31 @@ The test evaluates all 16 assignments and finds the unique optimum `{A, C}`,
 with value 7 (objective −7). The Part II T1 transformation is now implemented; see
 the [API, ordering contract and checks](docs/part2/t1.md).
 
+### Classical instance benchmarks
+
+The repository also contains other small Problem DSL models. Their exact optima
+are obtained by enumerating all `2^n` activity selections, discarding selections
+that omit a mandatory activity or contain a conflict, and maximising total value.
+Conflicts include both explicit conflicts and overlapping uses of a shared resource.
+The minimisation objective of the corresponding ILP is the negative of the value.
+
+| Model | Activities | Conflicts | Feasible selections | Exact optimum | Optimal selections |
+|---|---:|---:|---:|---:|---|
+| [tiny_conference](models/instances/tiny_conference.py) | 4 | 3 | 8 | 7 | `{A, C}` |
+| [multi_optima_sports](models/instances/multi_optima_sports.py) | 5 | 2 | 18 | 6 | `{Tennis1 or Tennis2, Padel or Basketball, Stretching}` (four combinations) |
+| [medium_festival](models/instances/medium_festival.py) | 7 | 6 | 15 | 19 | `{Opening, Folk, Rock, Headliner}` |
+| [large_open_day](models/instances/large_open_day.py) | 9 | 5 | 60 | 12 | `{Welcome, QuantumTalk, GameJam, StudentFair, Closing}` |
+| [infeasible_retreat](models/instances/infeasible_retreat.py) | 4 | 1 | 0 | None (infeasible) | None; Keynote and Board are mandatory and conflict |
+
+`tiny_conference` remains a smallest example; the infeasible example also has four
+activities. To reproduce the table and check all optimal selections, install the
+dependencies below and run:
+
+```bash
+python -m validation.classical_baseline
+python -m unittest tests.test_instances -v
+```
+
 The shared checker first calls `ObjectModel.validate()` for structural errors,
 including multiplicities and enumeration values. It then evaluates invariants.
 Our installed B-OCL evaluates three Problem DSL and two Solution DSL invariants.

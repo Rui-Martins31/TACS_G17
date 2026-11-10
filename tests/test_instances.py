@@ -29,6 +29,21 @@ class TestInstances(unittest.TestCase):
         self.assertTrue(any(r.optimum_value is None for r in results.values()))
         self.assertEqual(len({i.name for i in INSTANCES}), len(INSTANCES))
 
+    def test_documented_benchmark_sizes(self):
+        expected = {
+            "tiny": (4, 3, 8),
+            "multi_optima": (5, 2, 18),
+            "medium": (7, 6, 15),
+            "large": (9, 5, 60),
+            "infeasible": (4, 1, 0),
+        }
+        results = {i.name: solve(i.build()) for i in INSTANCES}
+        for name, (n, m, feasible) in expected.items():
+            with self.subTest(instance=name):
+                result = results[name]
+                self.assertEqual((result.n, result.m, result.feasible_count), (n, m, feasible))
+        self.assertEqual(results["tiny"].n, min(r.n for r in results.values()))
+
 
 if __name__ == "__main__":
     unittest.main()
