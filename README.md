@@ -25,11 +25,13 @@ minimisation objective. Together, the two languages provide the basis for a
 translation from the organiser's problem model to the quantum program implemented
 in Part II.
 
+
 | Student number | Name              | GitHub        |
 | -------------- | ----------------- | ------------- |
 | 202207410      | Lucas Branquinho  | Lucasalf21    |
 | 202104636      | Rui Martins       | Rui-Martins31 |
 | 202207742      | Margarida Fonseca | gamicmf       |
+
 
 # Part I: Problem and Solution DSLs
 
@@ -42,12 +44,14 @@ the classes in the [B-UML metamodel](metamodels/problem_dsl.py) and
 [diagram](diagrams/problem_DSL.png); the [full concept list](docs/part1/concepts.md#problem-dsl)
 also includes the ILP mappings and references. Ownership is represented by composition.
 
-| Concept | Attributes | Associations |
-|---|---|---|
-| ActivityPlan | name: str | Owns 1..* activities, 0..* resources and 0..* conflicts |
-| Activity | name: str; value, start, end: int; mandatory: bool | Belongs to 1 plan; uses 0..* resources; can be either endpoint of conflicts |
-| Resource | name: str; kind: ResourceKind | Belongs to 1 plan; used by 0..* activities |
-| Conflict | reason: str | Belongs to 1 plan; references exactly 1 left and 1 right activity |
+
+| Concept      | Attributes                                         | Associations                                                                 |
+| ------------ | -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ActivityPlan | name: str                                          | Owns 1..\* activities, 0..\* resources and 0..\* conflicts                   |
+| Activity     | name: str; value, start, end: int; mandatory: bool | Belongs to 1 plan; uses 0..\* resources; can be either endpoint of conflicts |
+| Resource     | name: str; kind: ResourceKind                      | Belongs to 1 plan; used by 0..\* activities                                  |
+| Conflict     | reason: str                                        | Belongs to 1 plan; references exactly 1 left and 1 right activity            |
+
 
 `ResourceKind = {ROOM, PERSON, EQUIPMENT}`. We use half-open intervals `[start, end)`
 so that back-to-back activities do not overlap. Mandatory activities must be selected.
@@ -67,15 +71,17 @@ and `resourcesWithinPlan` forbid cross-plan references.
 The [B-UML metamodel](metamodels/solution_dsl.py) and [diagram](diagrams/solution_DSL.png)
 describe the variables, constraints and objective of an optimisation problem.
 
-| Concept | Attributes | Associations |
-|---|---|---|
-| ILPProblem | name: str | Owns 1..* variables, 1 objective expression and 0..1 root constraint |
-| IntegerVariable | name: str; bitWidth: int | Belongs to 1 problem; referenced by 0..* terms |
-| LinearExpression | constant: int | Owns 0..* terms; belongs to exactly 1 problem objective or linear constraint |
-| LinearTerm | coefficient: int | Belongs to 1 expression; references 1 variable |
-| ConstraintExpression (abstract) | None | Belongs to exactly 1 problem as root or logical constraint as operand |
-| LinearConstraint | comparison: ComparisonKind | Inherits ConstraintExpression; owns 1 linear expression |
-| LogicalConstraint | operator: LogicalOperator | Inherits ConstraintExpression; owns 2..* constraint operands |
+
+| Concept                         | Attributes                 | Associations                                                                  |
+| ------------------------------- | -------------------------- | ----------------------------------------------------------------------------- |
+| ILPProblem                      | name: str                  | Owns 1..\* variables, 1 objective expression and 0..1 root constraint         |
+| IntegerVariable                 | name: str; bitWidth: int   | Belongs to 1 problem; referenced by 0..\* terms                               |
+| LinearExpression                | constant: int              | Owns 0..\* terms; belongs to exactly 1 problem objective or linear constraint |
+| LinearTerm                      | coefficient: int           | Belongs to 1 expression; references 1 variable                                |
+| ConstraintExpression (abstract) | None                       | Belongs to exactly 1 problem as root or logical constraint as operand         |
+| LinearConstraint                | comparison: ComparisonKind | Inherits ConstraintExpression; owns 1 linear expression                       |
+| LogicalConstraint               | operator: LogicalOperator  | Inherits ConstraintExpression; owns 2..\* constraint operands                 |
+
 
 `ComparisonKind = {EQ, LE}` specifies whether an expression must equal zero or be
 less than or equal to zero. `LogicalOperator = {AND, OR}` specifies how constraints
@@ -150,20 +156,27 @@ To find the best selection, we use Grover Adaptive Search, which runs a Grover s
 
 ## 5. The transformation chain
 
-```text
-ActivityPlan ──T1──▶ ILPProblem ──T2──▶ QuantumCircuit ──T3──▶ Qiskit Python ──▶ Aer ──▶ counts ──▶ activity names
-(Problem DSL)       (Solution DSL)      (BESSER model)          (generated)                          (T1 mapping)
-                                          ▲
-                              SolverConfig (iterations policy, rounds, shots, seed, backend)
+```mermaid
+flowchart LR
+    A["Activity plan · Problem DSL"] -->|T1: formulate optimisation problem| B["ILP model · Solution DSL"]
+    B -->|T2: build search circuit| C["Quantum circuit · BESSER"]
+    S["Solver configuration"] -.->|controls search and execution| C
+    C -->|T3: generate code| D["Qiskit Python"]
+    D -->|Run on Aer and decode using T1 mapping| E["Selected activities and total value"]
 ```
 
-| Step | Code | Detailed documentation |
-|---|---|---|
-| T1: problem → ILP | [problem_to_ilp.py](transformations/problem_to_ilp.py) | [t1.md](docs/part2/t1.md) |
-| T2: feasibility oracle | [ilp_to_oracle.py](transformations/ilp_to_oracle.py) | [oracle.md](docs/part2/oracle.md) |
-| T2: Grover rounds and adaptive search | [ilp_to_gas.py](transformations/ilp_to_gas.py), [solver_config.py](models/solver_config.py) | [solver_configuration.md](docs/part2/solver_configuration.md) |
-| T3: Qiskit generation and execution | [qiskit_executor.py](execution/qiskit_executor.py), [template](execution/templates/qiskit_circuit.py.j2) | [qiskit_execution.md](docs/part2/qiskit_execution.md) |
-| Validation | [validation/](validation/) | [validation.md](docs/part2/validation.md) |
+The search repeats circuit construction, generation and execution as it updates
+the objective threshold. The final result is the best feasible selection found.
+
+
+| Step                                  | Code                                                                                                      | Detailed documentation                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| T1: problem → ILP                     | [problem\_to\_ilp.py](transformations/problem_to_ilp.py)                                                  | [t1.md](docs/part2/t1.md)                                      |
+| T2: feasibility oracle                | [ilp\_to\_oracle.py](transformations/ilp_to_oracle.py)                                                    | [oracle.md](docs/part2/oracle.md)                              |
+| T2: Grover rounds and adaptive search | [ilp\_to\_gas.py](transformations/ilp_to_gas.py), [solver\_config.py](models/solver_config.py)            | [solver\_configuration.md](docs/part2/solver_configuration.md) |
+| T3: Qiskit generation and execution   | [qiskit\_executor.py](execution/qiskit_executor.py), [template](execution/templates/qiskit_circuit.py.j2) | [qiskit\_execution.md](docs/part2/qiskit_execution.md)         |
+| Validation                            | [validation/](validation/)                                                                                | [validation.md](docs/part2/validation.md)                      |
+
 
 ## 6. T1: Problem model to ILP
 
@@ -181,37 +194,42 @@ T1 validates both models using the structural and invariant checks from Part I.
 It builds the optimisation problem but does not solve it: conflicting mandatory
 activities still produce a valid ILP, although no selection can satisfy it.
 
-| Rule | Generated model | Reference |
-|---|---|---|
-| Activity selection | One unsigned one-bit variable per activity | Annex A, class C, pp. 12–13; D3, p. 14 |
-| Maximise activity value | Minimise `-sum(value_i * y_i)`, constant 0 | Annex A, class D/D3, pp. 13–14 |
-| Conflict | `y_i + y_j - 1 <= 0` | Annex A, D3, p. 14 |
-| Mandatory selection | `1 - y_i = 0` | Class C equality-atom syntax, pp. 12–13; event-domain rule |
-| Conjunction | No root for zero atoms; the atom for one; AND for two or more | Class C conjunction, pp. 12–13 |
+
+| Rule                    | Generated model                                               | Reference                                                  |
+| ----------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| Activity selection      | One unsigned one-bit variable per activity                    | Annex A, class C, pp. 12–13; D3, p. 14                     |
+| Maximise activity value | Minimise `-sum(value_i * y_i)`, constant 0                    | Annex A, class D/D3, pp. 13–14                             |
+| Conflict                | `y_i + y_j - 1 <= 0`                                          | Annex A, D3, p. 14                                         |
+| Mandatory selection     | `1 - y_i = 0`                                                 | Class C equality-atom syntax, pp. 12–13; event-domain rule |
+| Conjunction             | No root for zero atoms; the atom for one; AND for two or more | Class C conjunction, pp. 12–13                             |
+
 
 ## 7. T2: ILP to quantum circuit
 
 ### 7.1 Feasibility oracle
 
 > ✍️ **TODO(report): explain the oracle in your own words.** Facts to cover:
+>
 > - Each atom gets its own register, sized by the class C rule (smallest two's-complement
->   width holding every value of the atom). Variables are qubits `0..n-1` in T1 order.
+> width holding every value of the atom). Variables are qubits `0..n-1` in T1 order.
 > - `e ≤ 0` is stored as `e − 1`, so for integers "holds" ⇔ "negative" ⇔ sign bit = 1.
->   Equality atoms hold when every bit is 0.
+> Equality atoms hold when every bit is 0.
 > - Compute → mark → uncompute, so the scratch registers return to |0⟩ and the oracle
->   is a pure phase flip on the activity qubits.
+> is a pure phase flip on the activity qubits.
 > - Design choice: every atom, including conflicts, uses arithmetic as in class C. Cost:
->   2 qubits per conflict or mandatory activity, which limited the instance sizes (§9).
+> 2 qubits per conflict or mandatory activity, which limited the instance sizes (§9).
 > - Checked on every basis assignment of the hand-checked instance against the classical
->   constraints, and by breaking it on purpose (no uncompute, no `−1`, reversed order).
+> constraints, and by breaking it on purpose (no uncompute, no `−1`, reversed order).
 
-| Step | What it does | Reference |
-|---|---|---|
-| Width | smallest B with −2^(B−1) ≤ min and max ≤ 2^(B−1) − 1 | Annex A, class C |
-| Compute | add `e − 1` (LE) or `e` (EQ) into the register with QFT + phase gates | Draper (2000) |
-| Compare | LE: sign bit is 1. EQ: all bits are 0 | Gilliam et al. (2021) |
-| Mark | one multi-controlled Z over all atom flags | Annex A, class C |
-| Uncompute | same additions with negative angles | Bennett (1973) |
+
+| Step      | What it does                                                          | Reference             |
+| --------- | --------------------------------------------------------------------- | --------------------- |
+| Width     | smallest B with −2^(B−1) ≤ min and max ≤ 2^(B−1) − 1                  | Annex A, class C      |
+| Compute   | add `e − 1` (LE) or `e` (EQ) into the register with QFT + phase gates | Draper (2000)         |
+| Compare   | LE: sign bit is 1. EQ: all bits are 0                                 | Gilliam et al. (2021) |
+| Mark      | one multi-controlled Z over all atom flags                            | Annex A, class C      |
+| Uncompute | same additions with negative angles                                   | Bennett (1973)        |
+
 
 ### 7.2 Grover rounds and adaptive search
 
@@ -229,12 +247,14 @@ marked selections is unknown. The configuration below controls this policy and
 the stopping limits. The search returns the best selection found, decoded through
 T1's mapping; reaching a limit proves neither optimality nor infeasibility.
 
-| Solver configuration field | Default ([gas_defaults.py](models/gas_defaults.py)) |
-|---|---|
-| `round_policy` | `adaptive` (`fixed` also supported) |
-| `initial_window`, `growth_factor`, `max_window` | 1, 1.2, 16 |
-| `max_rounds`, `max_rounds_without_improvement` | 100, 20 |
-| `shots`, `seed`, `backend` | 1, 42, `aer_simulator` |
+
+| Solver configuration field                      | Default ([gas\_defaults.py](models/gas_defaults.py)) |
+| ----------------------------------------------- | ---------------------------------------------------- |
+| `round_policy`                                  | `adaptive` (`fixed` also supported)                  |
+| `initial_window`, `growth_factor`, `max_window` | 1, 1.2, 16                                           |
+| `max_rounds`, `max_rounds_without_improvement`  | 100, 20                                              |
+| `shots`, `seed`, `backend`                      | 1, 42, `aer_simulator`                               |
+
 
 ## 8. T3: Qiskit code generation
 
@@ -260,13 +280,15 @@ that omit a mandatory activity or contain a conflict and maximising total value.
 Conflicts include both explicit conflicts and overlapping uses of a shared resource.
 The minimisation objective of the corresponding ILP is the negative of the value.
 
-| Model | Activities | Conflicts | Feasible selections | Exact optimum | Optimal selections | Peak qubits |
-|---|---:|---:|---:|---:|---|---:|
-| [tiny_workshop](models/instances/tiny_workshop.py) | 3 | 1 | 6 | 3 | `{A, C}` | 8 |
-| [infeasible_retreat](models/instances/infeasible_retreat.py) | 4 | 1 | 0 | None (infeasible) | None; Keynote and Board are mandatory and conflict | 10 |
-| [multi_optima_sports](models/instances/multi_optima_sports.py) | 5 | 2 | 18 | 6 | `{Tennis1 or Tennis2, Padel or Basketball, Stretching}` (four combinations) | 14 |
-| [medium_conference](models/instances/medium_conference.py) | 4 | 3 | 8 | 7 | `{A, C}` | 15 |
-| [large_open_day](models/instances/large_open_day.py) | 9 | 2 | 96 | 12 | all except `RoboticsDemo` and `CampusWalk` | 20 |
+
+| Model                                                            | Activities | Conflicts | Feasible selections | Exact optimum     | Optimal selections                                                          | Peak qubits |
+| ---------------------------------------------------------------- | ----------: | ---------: | -------------------: | -----------------: | --------------------------------------------------------------------------- | -----------: |
+| [tiny\_workshop](models/instances/tiny_workshop.py)              | 3          | 1         | 6                   | 3                 | `{A, C}`                                                                    | 8           |
+| [infeasible\_retreat](models/instances/infeasible_retreat.py)    | 4          | 1         | 0                   | None (infeasible) | None; Keynote and Board are mandatory and conflict                          | 10          |
+| [multi\_optima\_sports](models/instances/multi_optima_sports.py) | 5          | 2         | 18                  | 6                 | `{Tennis1 or Tennis2, Padel or Basketball, Stretching}` (four combinations) | 14          |
+| [medium\_conference](models/instances/medium_conference.py)      | 4          | 3         | 8                   | 7                 | `{A, C}`                                                                    | 15          |
+| [large\_open\_day](models/instances/large_open_day.py)           | 9          | 2         | 96                  | 12                | all except `RoboticsDemo` and `CampusWalk`                                  | 20          |
+
 
 Peak qubits is the largest GAS circuit built during the search: one qubit per activity, a
 register per conflict or mandatory activity and, after the first round, the objective
@@ -293,45 +315,51 @@ Full method, tables and observations: [docs/part2/validation.md](docs/part2/vali
 2048 shots, against the ideal `P(k) = sin²((2k+1)θ)`, `sin θ = √(M/N)`, with M (marked
 selections) from the baseline. Optimal selections marked, best k:
 
-| Instance | M / N | k | Ideal P(k) | Measured |
-|---|---:|---:|---:|---:|
-| tiny | 1/8 | 2 | 0.945 | 0.936 |
-| multi_optima | 4/32 | 2 | 0.945 | 0.945 |
-| medium | 1/16 | 3 | 0.961 | 0.958 |
-| large | 1/512 | 17 | 0.999 | 0.999 |
-| infeasible (valid marked) | 0/16 | 0–1 | 0.000 | 0.000 |
+
+| Instance                  | M / N | k   | Ideal P(k) | Measured |
+| ------------------------- | -----: | ---: | ----------: | --------: |
+| tiny                      | 1/8   | 2   | 0.945      | 0.936    |
+| multi\_optima             | 4/32  | 2   | 0.945      | 0.945    |
+| medium                    | 1/16  | 3   | 0.961      | 0.958    |
+| large                     | 1/512 | 17  | 0.999      | 0.999    |
+| infeasible (valid marked) | 0/16  | 0–1 | 0.000      | 0.000    |
+
 
 **Grover Adaptive Search**, 10 seeds per instance, default solver configuration.
 Oracle calls = Σ over rounds of k × shots.
 
-| Instance | Qubits | Brute force 2^n | Optimum found | Oracle calls to answer (median) | Oracle calls total (mean) | Rounds (mean) |
-|---|---:|---:|---:|---:|---:|---:|
-| tiny | 8 | 8 | 10/10 | 0 | 60.6 | 25.9 |
-| infeasible | 10 | 16 | 10/10 (none reported) | 0 | 63.8 | 20.0 |
-| multi_optima | 14 | 32 | 10/10 | 0 | 62.4 | 24.5 |
-| medium | 15 | 16 | 10/10 | 0 | 60.7 | 28.9 |
-| large | 20 | 512 | 10/10 | 29 | 93.3 | 54.7 |
+
+| Instance      | Qubits | Brute force 2^n | Optimum found         | Oracle calls to answer (median) | Oracle calls total (mean) | Rounds (mean) |
+| ------------- | ------: | ---------------: | ---------------------: | -------------------------------: | -------------------------: | -------------: |
+| tiny          | 8      | 8               | 10/10                 | 0                               | 60.6                      | 25.9          |
+| infeasible    | 10     | 16              | 10/10 (none reported) | 0                               | 63.8                      | 20.0          |
+| multi\_optima | 14     | 32              | 10/10                 | 0                               | 62.4                      | 24.5          |
+| medium        | 15     | 16              | 10/10                 | 0                               | 60.7                      | 28.9          |
+| large         | 20     | 512             | 10/10                 | 29                              | 93.3                      | 54.7          |
+
 
 > ✍️ **TODO(report): interpret the results in your own words.** Facts to cover:
+>
 > - Every measured probability matches the formula within sampling error; this checks
->   marking, the `−1` shift, uncomputation, diffusion and qubit order together.
+> marking, the `−1` shift, uncomputation, diffusion and qubit order together.
 > - Every GAS run returned an exact optimum (any of the four for multi_optima) and never
->   reported a selection for the infeasible instance.
+> reported a selection for the infeasible instance.
 > - Small instances: 0 oracle calls before the answer, because the adaptive window starts
->   at k = 0 and random sampling already finds the optimum when N ≤ 32.
+> at k = 0 and random sampling already finds the optimum when N ≤ 32.
 > - Large: ~29 oracle calls before the answer, close to √512 ≈ 23 (Dürr–Høyer's O(√N)),
->   versus 512 brute-force evaluations. Most of the total is the 20-round stopping tail.
+> versus 512 brute-force evaluations. Most of the total is the 20-round stopping tail.
 > - Over-rotation: in tiny, one iteration takes P(valid) from 0.75 to 0, which is why the
->   number of iterations is randomised.
+> number of iterations is randomised.
 
 ## 11. Limitations
 
 > ✍️ **TODO(report): limitations in your own words.** Facts to cover:
+>
 > - A bounded search proves neither optimality nor infeasibility; only the classical
->   baseline does.
+> baseline does.
 > - 2 qubits per conflict/mandatory atom plus ~5 for the threshold: 20 qubits allows about
->   9 activities with few conflicts. All instances are trivial for brute force
->   (Annex A, final remarks). Alternative not pursued: a Toffoli-style ancilla per conflict.
+> 9 activities with few conflicts. All instances are trivial for brute force
+> (Annex A, final remarks). Alternative not pursued: a Toffoli-style ancilla per conflict.
 > - Ideal statevector simulation only: no noise, no real hardware, no depth optimisation.
 > - 10 seeds per instance give coarse success-rate estimates.
 > - Generated code uses Qiskit's deprecated `QFT` class (removed in Qiskit 3).
