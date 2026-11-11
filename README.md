@@ -3,8 +3,8 @@
 For TACS 2026/27 (FEUP M.EIC), we model the selection of non-conflicting activities
 with the highest total value, a Maximum-Weight Independent Set problem. In Part I,
 we define the problem DSL and a bounded integer linear programming (ILP) DSL.
-In Part II, we will implement the chain from problem to ILP to quantum circuit and
-Qiskit code, using Grover Adaptive Search.
+In Part II, we implement the chain from problem to ILP to quantum circuit and
+Qiskit code, using Grover Adaptive Search and the Aer simulator.
 
 We chose event programmes because each activity has a value, while conflicts limit
 which activities can be included together. We keep activity times fixed so that
@@ -22,8 +22,8 @@ Separating the Problem DSL from the Solution DSL keeps these event concepts
 independent of their mathematical formulation. Following Annex A, classes C/D,
 the Solution DSL uses bounded integer variables, linear constraints and a
 minimisation objective. Together, the two languages provide the basis for a
-translation from the organiser's description to the quantum program, which we
-will implement in Part II.
+translation from the organiser's problem model to the quantum program implemented
+in Part II.
 
 | Student number | Name              | GitHub        |
 | -------------- | ----------------- | ------------- |
@@ -144,15 +144,18 @@ for detailed mappings and [LLM_USAGE_LOG.md](LLM_USAGE_LOG.md) for AI assistance
 
 # Part II: Transformations, code generation and validation
 
-<!-- > ✍️ **TODO(report): introduction, a few sentences of your own.** Facts to cover:
-> - Part II implements the whole chain: Problem model → T1 → ILP model → T2 → BESSER
->   quantum circuit model → T3 (BESSER Qiskit generator) → Qiskit Python → Aer → result
->   in domain terms (selected activities and their total value).
-> - Class D algorithm: Grover Adaptive Search (GAS). It is hybrid: a classical loop
->   rebuilds the oracle with a new threshold each round and runs a new circuit.
-> - Every instance's result is checked against an exact classical (brute-force) optimum. -->
+In Part II, we transform the Problem DSL model into an ILP, then into BESSER
+quantum circuits and executable Qiskit code. We run the generated code on Aer
+and translate the results back into selected activities and their total value.
 
-In the second part of this project, we develop the necessary transformations to convert the Problem Model into the final result that allows us to solve different scenarios using quantum circuits. The resulting quantum program is capable of selecting the non-conflicting activities with the highest aggregated value. To find the best selection, we use Grover Adaptive Search, which runs a Grover search over and over, each round marking only the valid selections whose total value beats the best one found so far. Every time a better selection is found, a classical loop raises this threshold and builds a new circuit, stopping after a set number of rounds without improvement. Alongside that, each result is then compared with the result obtained by running the classical method, based on brute force, to assess if the generated quantum solution is correct.
+We use Grover Adaptive Search to look for the highest-value feasible selection.
+Initially, the oracle marks all feasible selections; after finding one, it marks
+only selections that improve on the best value found. A classical loop updates
+the objective threshold and rebuilds the circuit each round, stopping at the
+configured round limit or after a set number of rounds without improvement.
+The search returns the best selection found, without guaranteeing optimality.
+In our validation experiments, we compare its results with exact optima obtained
+by brute force to check feasibility and solution quality.
 
 ## 5. The transformation chain
 
@@ -173,15 +176,19 @@ ActivityPlan ──T1──▶ ILPProblem ──T2──▶ QuantumCircuit ─�
 
 ## 6. T1: Problem model to ILP
 
-> ✍️ **TODO(report): explain T1 in your own words.** Facts to cover:
-> - One 1-bit variable `y_i` per activity. Variable order = activity names sorted; this
->   order is the decoding contract used by the oracle, the sampler and the output.
-> - A conflict is explicit, or derived when two activities overlap in time (half-open
->   intervals) **and** share a resource. Duplicates are merged.
-> - Input and generated models are both validated with the OCL checkers from Part I.
->   Conflicting mandatory activities give a valid ILP with no feasible assignment.
-> - The design choice: resources and times exist only in the problem DSL; T1 turns
->   them into plain conflict atoms, so the ILP does not need to know about events.
+T1 translates an activity plan into an ILP model using the rules below. Each activity
+becomes a binary variable: 1 means selected and 0 means excluded. Activities are
+sorted by name, and T1 keeps a mapping to their variables so that later stages can
+assign qubits consistently and translate measured bits back into activity names.
+
+Conflicts come either from explicit restrictions or from activities that overlap
+in time and share a resource; repeated pairs produce only one constraint.
+Back-to-back activities do not overlap. This leaves times and resources in the
+Problem DSL, while the Solution DSL contains only the mathematical formulation.
+
+T1 validates both models using the structural and invariant checks from Part I.
+It builds the optimisation problem but does not solve it: conflicting mandatory
+activities still produce a valid ILP, although no selection can satisfy it.
 
 | Rule | Generated model | Reference |
 |---|---|---|
@@ -217,19 +224,19 @@ ActivityPlan ──T1──▶ ILPProblem ──T2──▶ QuantumCircuit ─�
 
 ### 7.2 Grover rounds and adaptive search
 
-> ✍️ **TODO(report): explain the search loop in your own words.** Facts to cover:
-> - A round: H on the activity qubits, then k × (oracle + diffusion on the activity
->   qubits only), then measurement.
-> - Round 1 marks every feasible selection. After a feasible selection with objective t
->   is found, T2 adds the threshold atom `g(y) − t + 1 ≤ 0`, so only strictly better
->   selections are marked. The oracle is rebuilt every round (its width can change).
-> - k is drawn uniformly from `[0, window)`; the window grows ×1.2 after a round without
->   improvement (cap 16) and resets after an improvement (Boyer et al.; Dürr & Høyer).
-> - Stops after 100 rounds or 20 rounds without improvement. Every measured selection is
->   re-checked classically before it can become the best.
-> - All of these parameters live in the solver configuration model, not in the
->   transformations. Decoding uses the T1 mapping; Qiskit's reversed bit order is handled
->   once, at the sampler boundary.
+Each round starts with a uniform superposition of activity selections, applies
+`k` repetitions of the oracle and diffusion on the activity qubits, then measures
+them. Until a feasible selection is found, the oracle marks all feasible selections.
+Afterwards, with best objective `t`, it adds `g(y) - t + 1 <= 0` to mark only strict
+improvements. The classical loop checks each sampled selection and updates `t`
+only for a better feasible result, rebuilding the oracle for the next round.
+
+The adaptive policy chooses `k` randomly from zero up to the rounded-down window
+size, excluding that upper bound. The window grows after unsuccessful rounds and
+resets after an improvement. This varies the search effort because the number of
+marked selections is unknown. The configuration below controls this policy and
+the stopping limits. The search returns the best selection found, decoded through
+T1's mapping; reaching a limit proves neither optimality nor infeasibility.
 
 | Solver configuration field | Default ([gas_defaults.py](models/gas_defaults.py)) |
 |---|---|
@@ -240,13 +247,19 @@ ActivityPlan ──T1──▶ ILPProblem ──T2──▶ QuantumCircuit ─�
 
 ## 8. T3: Qiskit code generation
 
-> ✍️ **TODO(report): explain T3 in your own words.** Facts to cover:
-> - Uses the course BESSER fork (pinned revision `9cf7a909`). Its Qiskit generator had
->   no template and no mapping for controlled-phase gates; we subclass it and supply
->   both in the repository. All other gates use BESSER's own mapping.
-> - Fresh code is generated for every round and run on Aer; generated code is never
->   edited by hand. It can also be written to a folder for inspection.
-> - Qiskit is pinned to 2.x because the generator emits the legacy `QFT` class.
+T3 turns the BESSER circuit into executable Qiskit Python code. The course fork's
+generator lacked a template and support for controlled-phase gates, so we extended
+it with a repository-owned template and the missing gate mapping. The remaining
+gates use BESSER's existing mappings. We pin the BESSER revision and restrict Qiskit
+to 2.x to retain compatibility with the generator's legacy `QFT` class.
+
+Each search round generates fresh code and runs it on Aer with the configured
+shot count and a new execution seed drawn from the configured random sequence,
+without manual edits to the generated file. The sampler converts measurement
+counts into bit tuples in T1 order before returning them to the search loop.
+T1's mapping connects the result to activity names. The final output reports the best selection
+found and its total value, or states that no feasible selection was found within
+the search budget.
 
 ## 9. Test instances and classical baseline
 
