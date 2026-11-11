@@ -1,4 +1,4 @@
-besser @ git+https://github.com/jacomecunha/BESSER.git
+besser @ git+https://github.com/jacomecunha/BESSER.git@9cf7a90928f44dabbe418dab69879014319ee38e
 bocl
-qiskit
+qiskit>=2.1,<3
 qiskit-aer
