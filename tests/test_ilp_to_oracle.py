@@ -26,8 +26,11 @@ TINY_MARKED = {"0000", "0001", "0010", "0100", "1000", "0101", "1001", "1010"}
 
 def to_qiskit(circuit):
     """Translate a BESSER circuit gate by gate. Fail on anything unsupported."""
-    qc = QiskitCircuit(circuit.num_qubits)
+    qc = QiskitCircuit(circuit.num_qubits, circuit.num_clbits)
     for op in circuit.operations:
+        if isinstance(op, bq.Measurement):
+            qc.measure(op.target_qubits[0], op.output_bit)
+            continue
         if any(state is not bq.ControlState.CONTROL for state in op.control_states):
             raise AssertionError(f"{op!r}: use X gates around a control instead of anti-controls")
         if isinstance(op, bq.QFTGate):

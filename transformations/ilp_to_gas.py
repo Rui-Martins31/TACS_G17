@@ -1,11 +1,9 @@
-"""T2 adaptive-search orchestration over the existing reversible oracle.
-
-The caller supplies a sampler: (oracle, layout, iterations, config) -> iterable
-of bit tuples in mapping order. It owns circuit diffusion, execution and decoding.
-"""
+"""T2 Grover rounds and adaptive search over the reversible feasibility oracle."""
 
 from dataclasses import dataclass
 from random import Random
+
+from besser.BUML.metamodel.quantum import quantum as bq
 
 from metamodels.problem_checks import linked, objects_of
 from models.solver_config import SolverConfig
@@ -18,6 +16,71 @@ class SearchResult:
     objective: int | None
     rounds: int
     stop_reason: str
+
+    def selected_activities(self, mapping):
+        """Names in T1 order, or None when no feasible candidate was sampled."""
+        if self.bits is None:
+            return None
+        if len(mapping) != len(self.bits):
+            raise ValueError("mapping must match the search result")
+        return tuple(activity.name for activity, bit in zip(mapping, self.bits) if bit)
+
+
+def build_round(oracle, layout, iterations):
+    """Prepare uniform decision bits, then oracle/diffusion; scratch starts at zero."""
+    if type(iterations) is not int or iterations < 0:
+        raise ValueError("iterations must be a nonnegative integer")
+    decision = layout.variable_qubits
+    if not decision or oracle.num_qubits != layout.num_qubits:
+        raise ValueError("oracle and layout must describe a nonempty decision register")
+    circuit = bq.QuantumCircuit(oracle.name + "_round", layout.num_qubits)
+    for qubit in decision:
+        circuit.add_operation(bq.HadamardGate(qubit))
+    for _ in range(iterations):
+        for operation in oracle.operations:
+            circuit.add_operation(operation)
+        # Grover diffusion H X (controlled Z) X H on decisions only, up to global -1.
+        for qubit in decision:
+            circuit.add_operation(bq.HadamardGate(qubit))
+            circuit.add_operation(bq.PauliXGate(qubit))
+        circuit.add_operation(bq.PauliZGate(decision[-1], control_qubits=decision[:-1]))
+        for qubit in decision:
+            circuit.add_operation(bq.PauliXGate(qubit))
+            circuit.add_operation(bq.HadamardGate(qubit))
+    return circuit
+
+
+def quantum_sampler(execute):
+    """Adapt #8's executor to search's sampler contract; create once per search.
+
+    execute(circuit, *, backend, shots, seed) returns Qiskit-style counts for
+    the single classical register. It owns BESSER generation/backend execution.
+    """
+    rng = None
+
+    def sample(oracle, layout, iterations, config):
+        nonlocal rng
+        if rng is None:
+            rng = Random(config.seed)
+        circuit = build_round(oracle, layout, iterations)
+        n = len(layout.variable_qubits)
+        circuit.add_creg(bq.ClassicalRegister("c", n))
+        for i, qubit in enumerate(layout.variable_qubits):
+            circuit.add_operation(bq.Measurement(qubit, output_bit=i))
+        counts = execute(circuit, backend=config.backend, shots=config.shots,
+                         seed=rng.randrange(2 ** 32))
+        samples = []
+        for label, count in counts.items():
+            if (not isinstance(label, str) or len(label) != n or set(label) - {"0", "1"}
+                    or type(count) is not int or count < 0):
+                raise ValueError("executor must return binary counts for the decision register")
+            # c[i] measured decision[i]; Qiskit displays c[n-1] ... c[0].
+            samples.extend([tuple(map(int, reversed(label)))] * count)
+        if len(samples) != config.shots:
+            raise ValueError("executor counts must sum to config.shots")
+        return samples
+
+    return sample
 
 
 def objective_atom(ilp_model, mapping):

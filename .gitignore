@@ -1,4 +1,5 @@
 # Generated folders
+.venv/
 .venv311/
 venv/
 __pycache__/
