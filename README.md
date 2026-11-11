@@ -119,9 +119,9 @@ with value 7 (objective −7).
 
 The shared checker first calls `ObjectModel.validate()` for structural errors,
 including multiplicities and enumeration values. It then evaluates invariants.
-Our installed B-OCL evaluates three Problem DSL and two Solution DSL invariants.
-We use Python equivalents for the five remaining rules in each language because
-local B-OCL parsing or evaluation failed. These rules are marked in the
+The checker routes three Problem DSL and two Solution DSL invariants to B-OCL.
+For B-OCL compatibility, it uses Python equivalents for five rules in each
+language. These rules are marked in the
 [constraint tables](docs/part1/concepts.md) and selected by `BOCL_UNSUPPORTED`.
 The manual fallback declarations need to be preserved when re-exporting the metamodel.
 
@@ -258,9 +258,9 @@ T1's mapping; reaching a limit proves neither optimality nor infeasibility.
 
 ## 8. T3: Qiskit code generation
 
-T3 turns the BESSER circuit into executable Qiskit Python code. The course fork's
-generator lacked a template and support for controlled-phase gates, so we extended
-it with a repository-owned template and the missing gate mapping. The remaining
+T3 turns the BESSER circuit into executable Qiskit Python code. For the pinned
+BESSER revision, the project supplies a repository-owned template and a
+controlled-phase gate mapping through a generator subclass. The remaining
 gates use BESSER's existing mappings. We pin the BESSER revision and restrict Qiskit
 to 2.x to retain compatibility with the generator's legacy `QFT` class.
 
@@ -370,11 +370,15 @@ Oracle calls = Σ over rounds of k × shots.
 python run_gas.py --instance tiny            # one instance, result in domain terms
 python run_gas.py --help                     # lists the instances
 python -m validation.classical_baseline      # exact optima by brute force (table in §9)
-python -m validation.qubit_count             # circuit sizes (~1 s)
-python -m validation.quantum_vs_classical    # validation tables (~5 min; --skip-gas: ~5 s)
+python -m validation.qubit_count             # circuit sizes
+python -m validation.quantum_vs_classical    # validation tables; --skip-gas omits GAS runs
 python -m pytest -q -W ignore                # all tests
 python -m tests.test_problem_dsl             # Problem DSL checks (not found by test discovery)
 ```
+
+Run in the activated project environment. Runtime depends on hardware, dependency
+versions, instance size and solver configuration. For setup and conditional Aer
+import troubleshooting, see [Qiskit execution](docs/part2/qiskit_execution.md).
 
 <!-- ### References (Part II)
 

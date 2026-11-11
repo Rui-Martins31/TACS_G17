@@ -5,10 +5,14 @@ generator → Aer) and is compared with the exact brute-force baseline
 (`validation/classical_baseline.py`). Reproduce everything with:
 
 ```bash
-python -m validation.qubit_count           # circuit sizes (about 1 s)
-python -m validation.quantum_vs_classical  # experiments A and B (about 5 min; large dominates)
-python -m validation.quantum_vs_classical --skip-gas   # experiment A only (about 5 s)
+python -m validation.qubit_count           # circuit sizes
+python -m validation.quantum_vs_classical  # experiments A and B
+python -m validation.quantum_vs_classical --skip-gas   # experiment A only
 ```
+
+Run in the activated project environment. Runtime depends on hardware, dependency
+versions, circuit sizes and solver configuration. For conditional Aer import
+troubleshooting, see [Qiskit execution](qiskit_execution.md#troubleshooting-aer-imports-on-linux).
 
 ## Instances and qubits
 

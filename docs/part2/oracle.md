@@ -1,6 +1,6 @@
 # Oracle: ILP to quantum circuit
 
-Implementation: [ilp_to_oracle.py](../../transformations/ilp_to_oracle.py), issue #6. \
+Implementation: [ilp_to_oracle.py](../../transformations/ilp_to_oracle.py). \
 Worked example: [oracle_expected_medium_conference.md](oracle_expected_medium_conference.md).
 
 The oracle flips the phase of every assignment `y` that satisfies all ILP constraints.

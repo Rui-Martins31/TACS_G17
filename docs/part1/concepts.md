@@ -63,8 +63,8 @@ the same ILPProblem. Variable names must be unique within a problem and bit widt
 These rules are represented in [the B-UML metamodel](../../metamodels/solution_dsl.py)
 and its OCL constraints. `ConstraintExpression` cannot be instantiated directly.
 
-OCL constraints (the installed B-OCL version fails to parse or evaluate the ones marked *,
-which are checked by an equivalent Python function in
+OCL constraints (the ones marked * use equivalent Python functions for B-OCL
+compatibility; see
 [metamodels/solution_checks.py](../../metamodels/solution_checks.py)):
 
 | Name | Context | Rule |

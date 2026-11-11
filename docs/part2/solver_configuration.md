@@ -51,8 +51,8 @@ then advances it for each execution instead of resetting the backend identically
 
 Production generation/execution is provided by
 `execution.qiskit_executor.execute`. Its repository-tracked BESSER generator
-subclass supplies the missing template and controlled-phase mapping, retaining
-BESSER's gate mapper for the remaining D3 operations. Each round generates and
+subclass supplies the template and controlled-phase mapping needed by the pinned
+BESSER revision, retaining its gate mapper for the remaining D3 operations. Each round generates and
 executes fresh code on Aer. See [setup, runnable command and supported gates](qiskit_execution.md).
 
 `tests/test_gas_simulator.py` retains the independent test converter for quantum
@@ -88,14 +88,15 @@ finite rounds does not prove that a sampled solution is optimal.
 
 ## Verification
 
+Run from the repository root with the project environment activated.
 Deterministic controller/adapter tests and actual simulator tests are separate:
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_solver_config tests.test_ilp_to_gas -v
-PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_gas_simulator -v
-PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_qiskit_executor -v
-PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest discover -s tests -v
-PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m tests.test_problem_dsl
+python -B -m unittest tests.test_solver_config tests.test_ilp_to_gas -v
+python -B -m unittest tests.test_gas_simulator -v
+python -B -m unittest tests.test_qiskit_executor -v
+python -B -m unittest discover -s tests -v
+python -B -m tests.test_problem_dsl
 ```
 
 The standalone Problem DSL `run()` is not invoked by unittest discovery, so its
@@ -105,11 +106,5 @@ seeded Aer sampling and baseline agreement. Their small unique-feasible example
 has exactly one marked state out of four, so one Grover iteration selects it with
 probability one in the ideal simulator. No unseeded stochastic success is required.
 
-On this Linux environment, importing Aer needs its bundled OpenMP library
-preloaded to avoid `cannot allocate memory in static TLS block`. The simulator
-and discovery commands passed with this prefix (adjust the library path for
-another Python/Aer installation):
-
-```bash
-LD_PRELOAD="$PWD/.venv/lib/python3.12/site-packages/qiskit_aer.libs/libgomp-a34b3233.so.1.0.0" PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest discover -s tests -v
-```
+If Aer fails to import, consult the
+[conditional Linux OpenMP troubleshooting steps](qiskit_execution.md#troubleshooting-aer-imports-on-linux).
