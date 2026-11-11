@@ -11,11 +11,31 @@ from transformations.ilp_to_oracle import Atom, atoms_from_ilp, build_oracle
 
 
 @dataclass(frozen=True)
+class RoundRecord:
+    """One GAS round, kept for validation metrics."""
+    threshold: int | None   # best objective before the round; None = feasibility-only oracle
+    iterations: int         # Grover iterations k in this round's circuit
+    shots: int              # executions of that circuit
+    improved: bool
+
+    @property
+    def oracle_calls(self):
+        # Each shot runs a circuit containing k oracle applications
+        # (query counting as in Boyer et al. 1998 and Durr & Hoyer 1996).
+        return self.iterations * self.shots
+
+
+@dataclass(frozen=True)
 class SearchResult:
     bits: tuple[int, ...] | None
     objective: int | None
     rounds: int
     stop_reason: str
+    history: tuple[RoundRecord, ...] = ()
+
+    @property
+    def oracle_calls(self):
+        return sum(record.oracle_calls for record in self.history)
 
     def selected_activities(self, mapping):
         """Names in T1 order, or None when no feasible candidate was sampled."""
@@ -113,6 +133,7 @@ def search(ilp_model, mapping, config, sampler):
         raise ValueError("constraint name reserved for objective threshold")
     rng = Random(config.seed)
     best_bits, best_value, failures, rounds = None, None, 0, 0
+    history = []
     window = float(config.initial_window)
     while rounds < config.max_rounds and failures < config.max_rounds_without_improvement:
         threshold = () if best_value is None else (
@@ -122,6 +143,7 @@ def search(ilp_model, mapping, config, sampler):
         iterations = (config.fixed_iterations if config.round_policy == "fixed"
                       else rng.randrange(max(1, int(window))))
         improved = False
+        threshold_before = best_value
         for candidate in sampler(oracle, layout, iterations, config):
             bits = tuple(candidate)
             if len(bits) != len(mapping) or any(type(bit) is not int or bit not in (0, 1) for bit in bits):
@@ -133,10 +155,11 @@ def search(ilp_model, mapping, config, sampler):
             if best_value is None or value < best_value:
                 best_bits, best_value, improved = bits, value, True
         rounds += 1
+        history.append(RoundRecord(threshold_before, iterations, config.shots, improved))
         if improved:
             failures, window = 0, float(config.initial_window)
         else:
             failures += 1
             window = min(config.max_window, window * config.growth_factor)
     reason = "max_rounds" if rounds == config.max_rounds else "max_rounds_without_improvement"
-    return SearchResult(best_bits, best_value, rounds, reason)
+    return SearchResult(best_bits, best_value, rounds, reason, tuple(history))

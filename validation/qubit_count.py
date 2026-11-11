@@ -1,20 +1,3 @@
-"""Exact qubit counts of the GAS circuits for each instance.
-
-The counts come from the same code that builds the circuits (T1 + oracle), not
-from a separate formula:
-
-- Round 1 has no threshold: the oracle layout gives the exact qubit count
-  (one qubit per activity, plus one register per constraint atom whose width
-  follows Annex A, class C: the smallest two's-complement width that holds every
-  value of the atom).
-- Later rounds add the threshold atom g(y) - t + 1 <= 0, where t is the best
-  objective found so far (Durr & Hoyer; Gilliam et al., Quantum 5, 428, 2021).
-  Its register width depends on t, so we build it for every value t can take
-  (every feasible objective value, by brute force) and report the largest.
-
-Run: python -m validation.qubit_count
-"""
-
 from dataclasses import dataclass
 from itertools import product
 
