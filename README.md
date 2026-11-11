@@ -368,7 +368,7 @@ registers also make larger instances expensive: each conflict or mandatory
 activity uses two qubits, and the threshold needs another register. We therefore
 kept our instances within roughly 20 qubits, making them easy to solve classically.
 
-We ran the experiments on an ideal simulator, without noise, and did not optimise
+We ran the experiments on an ideal simulator, without noise and did not optimise
 circuit depth or run on real quantum hardware. With only ten seeds per instance,
 the measured success rates are also rough estimates. Finally, the generated code
 uses Qiskit's deprecated `QFT` class, so we restrict the dependency to Qiskit
