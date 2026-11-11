@@ -144,18 +144,9 @@ for detailed mappings and [LLM_USAGE_LOG.md](LLM_USAGE_LOG.md) for AI assistance
 
 # Part II: Transformations, code generation and validation
 
-In Part II, we transform the Problem DSL model into an ILP, then into BESSER
-quantum circuits and executable Qiskit code. We run the generated code on Aer
-and translate the results back into selected activities and their total value.
+In the second part of this project, we develop the necessary transformations to convert the Problem Model into the final result that allows us to solve different scenarios using quantum circuits. The resulting quantum program is capable of selecting the non-conflicting activities with the highest aggregated value.
 
-We use Grover Adaptive Search to look for the highest-value feasible selection.
-Initially, the oracle marks all feasible selections; after finding one, it marks
-only selections that improve on the best value found. A classical loop updates
-the objective threshold and rebuilds the circuit each round, stopping at the
-configured round limit or after a set number of rounds without improvement.
-The search returns the best selection found, without guaranteeing optimality.
-In our validation experiments, we compare its results with exact optima obtained
-by brute force to check feasibility and solution quality.
+To find the best selection, we use Grover Adaptive Search, which runs a Grover search over and over, each round marking only the valid selections whose total value beats the best one found so far. Every time a better selection is found, a classical loop raises this threshold and builds a new circuit, stopping after a set number of rounds without improvement. Alongside that, each result is then compared with the result obtained by running the classical method, based on brute force, to assess if the generated quantum solution is correct.
 
 ## 5. The transformation chain
 
