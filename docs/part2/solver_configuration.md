@@ -49,28 +49,29 @@ in mapping insertion order. It validates the count labels and multiplicities.
 Create a fresh sampler for each search: it seeds a private random stream once,
 then advances it for each execution instead of resetting the backend identically.
 
-**Production generation/execution remains an issue #8 dependency.** No #8 executor
-is present in this checkout. This implementation introduces no second production
-BESSER-to-Qiskit translator. The installed BESSER generator also needs verification
-in #8: its installed package lacks the Qiskit template and its gate mapper does
-not handle the oracle's `CPhaseGate`. The test-only converter is not a substitute
-for fixing and verifying that production boundary.
+Production generation/execution is provided by
+`execution.qiskit_executor.execute`. Its repository-tracked BESSER generator
+subclass supplies the missing template and controlled-phase mapping, retaining
+BESSER's gate mapper for the remaining D3 operations. Each round generates and
+executes fresh code on Aer. See [setup, runnable command and supported gates](qiskit_execution.md).
 
-The simulator tests use the existing oracle test converter with real Qiskit
-Statevector/Aer execution. They exercise the sampler/controller connection, but
-do not establish that BESSER-generated production code runs or that hardware has
-been tested. The classical solver is used only for independent verification.
+`tests/test_gas_simulator.py` retains the independent test converter for quantum
+checks. `tests/test_qiskit_executor.py` additionally tests the actual production
+generator/executor, including direct execution of generated files, changed
+threshold layouts and baseline agreement. The classical solver is used only for
+verification. Quantum hardware has not been tested.
 
 ## Usage
 
-Pass #8's executor into this function when that adapter is available:
+Use the production executor with the existing sampler:
 
 ```python
 from models.gas_defaults import DEFAULT_CONFIG
 from transformations.problem_to_ilp import transform
 from transformations.ilp_to_gas import quantum_sampler, search
+from execution.qiskit_executor import execute
 
-def run_gas(problem_model, execute, config=DEFAULT_CONFIG):
+def run_gas(problem_model, config=DEFAULT_CONFIG):
     ilp_model, mapping = transform(problem_model)
     result = search(ilp_model, mapping, config, quantum_sampler(execute))
     return result, result.selected_activities(mapping)
@@ -92,6 +93,7 @@ Deterministic controller/adapter tests and actual simulator tests are separate:
 ```bash
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_solver_config tests.test_ilp_to_gas -v
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_gas_simulator -v
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_qiskit_executor -v
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest discover -s tests -v
 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m tests.test_problem_dsl
 ```

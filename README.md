@@ -108,7 +108,9 @@ Subject to A+B-1 <= 0, B+C-1 <= 0, C+D-1 <= 0
 
 The test evaluates all 16 assignments and finds the unique optimum `{A, C}`,
 with value 7 (objective −7). The Part II T1 transformation is now implemented; see
-the [API, ordering contract and checks](docs/part2/t1.md).
+the [API, ordering contract and checks](docs/part2/t1.md). The
+[generated Qiskit/Aer runner](docs/part2/qiskit_execution.md) connects T1 and GAS
+to simulator execution and prints the selected activities and total value.
 
 ### Classical instance benchmarks
 
