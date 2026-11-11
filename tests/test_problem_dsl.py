@@ -6,7 +6,7 @@ from metamodels.problem_checks import PYTHON_EQUIVALENTS, check_model
 from metamodels.problem_dsl import (
     BOCL_UNSUPPORTED, Activity, ActivityPlan, Conflict, Resource, problem_dsl,
 )
-from models.instances.tiny_conference import build
+from models.instances.medium_conference import build
 
 
 def find(object_model, object_name):
@@ -104,7 +104,7 @@ def run():
     failures = []
 
     results = check_model(problem_dsl, build(), BOCL_UNSUPPORTED)
-    print("Valid model: tiny_conference")
+    print("Valid model: medium_conference")
     for r in results:
         print(f"  {'OK  ' if r.holds else 'FAIL'} {r.constraint:<22} [{r.engine}] {r.detail}")
         if r.holds is not True:

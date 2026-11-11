@@ -9,7 +9,7 @@ from besser.BUML.metamodel.quantum import quantum as bq
 
 from models.gas_defaults import DEFAULT_CONFIG
 from models.instances.infeasible_retreat import build as infeasible
-from models.instances.tiny_conference import build
+from models.instances.medium_conference import build
 from transformations.ilp_to_gas import quantum_sampler, search
 from transformations.ilp_to_oracle import build_oracle
 from transformations.problem_to_ilp import transform

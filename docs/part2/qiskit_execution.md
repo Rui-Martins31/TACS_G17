@@ -30,8 +30,9 @@ and stopping reason. It checks that the ILP objective equals the negative sum of
 selected activity values. A feasible empty selection prints value 0; failure to
 sample a feasible candidate prints “No feasible solution found within the search
 budget.” Neither a returned candidate nor an unsuccessful run proves optimality
-or infeasibility. Available instance names are listed by `--help`; medium/large
-instances may need substantially more simulation memory because of scratch qubits.
+or infeasibility. Available instance names are listed by `--help`. All instances
+stay within 20 qubits (`python -m validation.qubit_count`); the largest takes
+about 16 s with the default solver configuration.
 
 ## Generator compatibility
 

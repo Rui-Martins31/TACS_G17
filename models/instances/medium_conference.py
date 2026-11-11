@@ -1,6 +1,7 @@
-"""Tiny example problem model, checkable by hand.
+"""Medium instance (formerly tiny_conference): still small enough to check by hand.
 
-A one-morning workshop with four talks (times in minutes from 9:00):
+A one-morning conference with four talks (times in minutes from 9:00).
+Qubits at the GAS peak: 15 (python -m validation.qubit_count).
 
     talk  value  time       uses
     A     3      [0, 60)    Room1
@@ -46,13 +47,13 @@ def build():
                 .link(d, "right")
                 .build())
 
-    plan = ObjectBuilder(ActivityPlan).name("plan").attributes(name="TinyWorkshop").build()
+    plan = ObjectBuilder(ActivityPlan).name("plan").attributes(name="MorningConference").build()
     plan.activities = {a, b, c, d}
     plan.resources  = {room1, room2, ana}
     plan.conflicts  = {c_d}
 
-    return ObjectModel(name="tiny_conference",
+    return ObjectModel(name="medium_conference",
                        objects={plan, a, b, c, d, room1, room2, ana, c_d})
 
 
-tiny_conference = build()
+medium_conference = build()

@@ -151,11 +151,12 @@ class TestGasEntryPoint(unittest.TestCase):
         self.assertNotIn("Total activity value:", output)
 
     def test_empty_selection_and_objective_value_check(self):
-        with patch("run_gas.search", return_value=SearchResult((0, 0, 0, 0), 0, 1, "max_rounds")):
+        # Default instance is tiny (3 activities), so results carry 3 bits.
+        with patch("run_gas.search", return_value=SearchResult((0, 0, 0), 0, 1, "max_rounds")):
             output = self.output(["--max-rounds", "1"])
         self.assertIn("empty selection; feasible", output)
         self.assertIn("Total activity value: 0", output)
-        with patch("run_gas.search", return_value=SearchResult((1, 0, 0, 0), 0, 1, "max_rounds")):
+        with patch("run_gas.search", return_value=SearchResult((1, 0, 0), 0, 1, "max_rounds")):
             with self.assertRaisesRegex(RuntimeError, "negative selected activity value"):
                 self.output(["--max-rounds", "1"])
 

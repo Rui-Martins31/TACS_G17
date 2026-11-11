@@ -10,7 +10,7 @@ from besser.BUML.metamodel.object.builder import ObjectBuilder
 from metamodels.problem_checks import CheckResult, linked, objects_of
 from metamodels.problem_dsl import Activity, ActivityPlan
 from metamodels.solution_checks import check_solution_model
-from models.instances.tiny_conference import build
+from models.instances.medium_conference import build
 from tests.test_problem_dsl import add_conflict, add_second_plan, find
 from tests.test_solution_dsl import evaluate_constraint, evaluate_expression, slot_value
 from transformations.problem_to_ilp import transform

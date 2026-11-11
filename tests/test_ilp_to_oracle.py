@@ -11,7 +11,7 @@ from qiskit.quantum_info import Statevector
 from besser.BUML.metamodel.quantum import quantum as bq
 
 from metamodels.problem_checks import linked, objects_of
-from models.instances.tiny_conference import build
+from models.instances.medium_conference import build
 from tests.test_problem_dsl import add_conflict
 from tests.test_problem_to_ilp import independent_plan
 from tests.test_solution_dsl import evaluate_constraint, evaluate_expression, slot_value
@@ -19,7 +19,7 @@ from transformations.ilp_to_oracle import build_compute, build_oracle
 from transformations.problem_to_ilp import transform
 
 
-# From docs/part2/oracle_expected_tiny_conference.md.
+# From docs/part2/oracle_expected_medium_conference.md.
 # Qiskit strings: q0 on the right, so each string is y_3 y_2 y_1 y_0.
 TINY_MARKED = {"0000", "0001", "0010", "0100", "1000", "0101", "1001", "1010"}
 

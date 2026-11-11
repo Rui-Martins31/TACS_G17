@@ -96,7 +96,7 @@ A problem without a root constraint has no constraints.
 
 ## 3. Hand-built models and validation
 
-The [problem example](models/instances/tiny_conference.py) contains four activities
+The [problem example](models/instances/medium_conference.py) contains four activities
 A–D with values 3, 2, 4 and 1. A–B and B–C conflict because they overlap and use the
 same room; C–D has an explicit conflict. We build the corresponding BESSER solution object model by hand in
 `build_solution_example()` in [the Solution DSL tests](tests/test_solution_dsl.py):
@@ -120,20 +120,24 @@ that omit a mandatory activity or contain a conflict, and maximising total value
 Conflicts include both explicit conflicts and overlapping uses of a shared resource.
 The minimisation objective of the corresponding ILP is the negative of the value.
 
-| Model | Activities | Conflicts | Feasible selections | Exact optimum | Optimal selections |
-|---|---:|---:|---:|---:|---|
-| [tiny_conference](models/instances/tiny_conference.py) | 4 | 3 | 8 | 7 | `{A, C}` |
-| [multi_optima_sports](models/instances/multi_optima_sports.py) | 5 | 2 | 18 | 6 | `{Tennis1 or Tennis2, Padel or Basketball, Stretching}` (four combinations) |
-| [medium_festival](models/instances/medium_festival.py) | 7 | 6 | 15 | 19 | `{Opening, Folk, Rock, Headliner}` |
-| [large_open_day](models/instances/large_open_day.py) | 9 | 5 | 60 | 12 | `{Welcome, QuantumTalk, GameJam, StudentFair, Closing}` |
-| [infeasible_retreat](models/instances/infeasible_retreat.py) | 4 | 1 | 0 | None (infeasible) | None; Keynote and Board are mandatory and conflict |
+| Model | Activities | Conflicts | Feasible selections | Exact optimum | Optimal selections | Peak qubits |
+|---|---:|---:|---:|---:|---|---:|
+| [tiny_workshop](models/instances/tiny_workshop.py) | 3 | 1 | 6 | 3 | `{A, C}` | 8 |
+| [infeasible_retreat](models/instances/infeasible_retreat.py) | 4 | 1 | 0 | None (infeasible) | None; Keynote and Board are mandatory and conflict | 10 |
+| [multi_optima_sports](models/instances/multi_optima_sports.py) | 5 | 2 | 18 | 6 | `{Tennis1 or Tennis2, Padel or Basketball, Stretching}` (four combinations) | 14 |
+| [medium_conference](models/instances/medium_conference.py) | 4 | 3 | 8 | 7 | `{A, C}` | 15 |
+| [large_open_day](models/instances/large_open_day.py) | 9 | 2 | 96 | 12 | all except `RoboticsDemo` and `CampusWalk` | 20 |
 
-`tiny_conference` remains a smallest example; the infeasible example also has four
-activities. To reproduce the table and check all optimal selections, install the
+Peak qubits is the largest GAS circuit built during the search: one qubit per activity, a
+register per conflict or mandatory activity, and, after the first round, the objective
+threshold register. Each conflict costs a 2-qubit register, so the instances are sized to
+stay within the ~20-qubit simulation limit of Annex A. `medium_conference` is the hand-checked
+example above. To reproduce the table and check all optimal selections, install the
 dependencies below and run:
 
 ```bash
 python -m validation.classical_baseline
+python -m validation.qubit_count
 python -m unittest tests.test_instances -v
 ```
 

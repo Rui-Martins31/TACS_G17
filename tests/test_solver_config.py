@@ -2,7 +2,7 @@ import unittest
 from dataclasses import replace
 
 from models.gas_defaults import DEFAULT_CONFIG
-from models.instances.tiny_conference import build
+from models.instances.medium_conference import build
 from transformations.ilp_to_gas import search
 from transformations.problem_to_ilp import transform
 

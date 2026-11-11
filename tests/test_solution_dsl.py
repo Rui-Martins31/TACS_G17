@@ -21,7 +21,7 @@ from metamodels.solution_dsl import (
 
 
 def build_solution_example():
-    """Hand-built ILP for tiny_conference: weights 3,2,4,1; edges AB,BC,CD.
+    """Hand-built ILP for medium_conference: weights 3,2,4,1; edges AB,BC,CD.
 
     Returns (object_model, named_objects). Sets multi-valued links once, because
     repeated assignments to a B-UML association end may replace previous links.
@@ -33,7 +33,7 @@ def build_solution_example():
         named[identifier] = obj
         return obj
 
-    problem = make(ILPProblem, 'problem', name='TinyWorkshopILP')
+    problem = make(ILPProblem, 'problem', name='MorningConferenceILP')
     variables = [make(IntegerVariable, 'y_' + letter, name='y_' + letter, bitWidth=1)
                  for letter in 'ABCD']
     problem.variables = set(variables)
@@ -63,7 +63,7 @@ def build_solution_example():
     root = make(LogicalConstraint, 'all_conflicts', operator='AND')
     root.operands = atoms
     problem.root = root
-    return ObjectModel(name='tiny_conference_solution', objects=set(named.values())), named
+    return ObjectModel(name='medium_conference_solution', objects=set(named.values())), named
 
 
 def slot_value(obj, attribute_name):
