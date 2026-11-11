@@ -13,7 +13,7 @@ at construction, rather than silently falling back to a hard-coded choice.
 | `fixed_iterations` | Grover iterations per round under the fixed policy (zero is allowed) |
 | `initial_window`, `growth_factor`, `max_window` | Adaptive policy: sample an integer in `[0, floor(window))`; grow the window on failure, reset it on improvement, and cap it |
 | `shots` | Requested number of samples per round |
-| `seed` | Seed for round selection; also supplied to the sampler for execution |
+| `seed` | Seed for round selection and the sampler's reproducible stream of per-round execution seeds |
 | `backend` | Backend identifier supplied to the sampler |
 
 `transformations.ilp_to_gas.search(ilp_model, mapping, config, sampler)` consumes
@@ -22,20 +22,92 @@ sample is found, it builds an oracle with the additional integer constraint
 `objective - best + 1 <= 0`, so only strict improvements are marked. Every
 sample is checked against the original constraints before updating the best.
 
-The sampler is a callable `(oracle, layout, iterations, config)` returning an
-iterable of bit tuples in T1 mapping order. It must prepare the search state,
-apply the oracle and diffusion for the requested iterations, execute using the
-configured backend, shots and seed, and decode measurements. **A quantum sampler,
-diffusion circuit and backend integration are not implemented yet.** The
-controller and its tests use an injected sampler; passing configuration does not
-itself run a quantum circuit. A backend may manage its random seed across rounds
-to avoid restarting the same random sequence each time.
+## Quantum rounds and execution boundary
+
+`build_round(oracle, layout, iterations)` constructs a BESSER quantum model. It
+prepares only the decision qubits with H gates, leaving scratch at zero. Each
+iteration appends the existing compute/mark/uncompute oracle and then diffusion
+on the decision register only: H, X, multi-controlled Z, X, H. This implements
+Grover diffusion up to an irrelevant global phase. Zero iterations produces the
+uniform decision state. The builder uses the supplied layout every round:
+adding or changing the threshold can change the arithmetic register widths.
+
+`quantum_sampler(execute)` connects these rounds to the existing callable
+contract `(oracle, layout, iterations, config) -> iterable of bit tuples`.
+It adds one classical register and measures decision qubit `layout.variable_qubits[i]`
+into classical bit `i`. It calls the injected execution adapter as follows:
+
+```python
+counts = execute(besser_circuit, backend=config.backend,
+                 shots=config.shots, seed=round_seed)
+```
+
+The executor must generate and run the circuit, honour those options, and return
+binary counts for that single classical register, totalling `shots`. The sampler
+reverses Qiskit's displayed `c[n-1] ... c[0]` labels into logical decision tuples
+in mapping insertion order. It validates the count labels and multiplicities.
+Create a fresh sampler for each search: it seeds a private random stream once,
+then advances it for each execution instead of resetting the backend identically.
+
+**Production generation/execution remains an issue #8 dependency.** No #8 executor
+is present in this checkout. This implementation introduces no second production
+BESSER-to-Qiskit translator. The installed BESSER generator also needs verification
+in #8: its installed package lacks the Qiskit template and its gate mapper does
+not handle the oracle's `CPhaseGate`. The test-only converter is not a substitute
+for fixing and verifying that production boundary.
+
+The simulator tests use the existing oracle test converter with real Qiskit
+Statevector/Aer execution. They exercise the sampler/controller connection, but
+do not establish that BESSER-generated production code runs or that hardware has
+been tested. The classical solver is used only for independent verification.
+
+## Usage
+
+Pass #8's executor into this function when that adapter is available:
+
+```python
+from models.gas_defaults import DEFAULT_CONFIG
+from transformations.problem_to_ilp import transform
+from transformations.ilp_to_gas import quantum_sampler, search
+
+def run_gas(problem_model, execute, config=DEFAULT_CONFIG):
+    ilp_model, mapping = transform(problem_model)
+    result = search(ilp_model, mapping, config, quantum_sampler(execute))
+    return result, result.selected_activities(mapping)
+```
+
+Activity names are decoded using the original T1 mapping. Do not reorder it by
+ILP object-set iteration or raw measurement labels. A feasible empty selection
+decodes to `()`, while no feasible candidate found decodes to `None`.
 
 The returned `SearchResult` reports the best observed assignment and objective,
 round count and stopping reason. An empty result means no feasible sample was
 observed, not that the instance is proven infeasible. Likewise, stopping after
 finite rounds does not prove that a sampled solution is optimal.
 
+## Verification
+
+Deterministic controller/adapter tests and actual simulator tests are separate:
+
 ```bash
-python -m unittest tests.test_solver_config -v
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_solver_config tests.test_ilp_to_gas -v
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest tests.test_gas_simulator -v
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest discover -s tests -v
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m tests.test_problem_dsl
+```
+
+The standalone Problem DSL `run()` is not invoked by unittest discovery, so its
+module command must run separately. Quantum tests check scratch cleanup,
+amplification, strict threshold phases, changing layouts, decision ordering,
+seeded Aer sampling and baseline agreement. Their small unique-feasible example
+has exactly one marked state out of four, so one Grover iteration selects it with
+probability one in the ideal simulator. No unseeded stochastic success is required.
+
+On this Linux environment, importing Aer needs its bundled OpenMP library
+preloaded to avoid `cannot allocate memory in static TLS block`. The simulator
+and discovery commands passed with this prefix (adjust the library path for
+another Python/Aer installation):
+
+```bash
+LD_PRELOAD="$PWD/.venv/lib/python3.12/site-packages/qiskit_aer.libs/libgomp-a34b3233.so.1.0.0" PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m unittest discover -s tests -v
 ```
