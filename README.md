@@ -208,18 +208,22 @@ activities still produce a valid ILP, although no selection can satisfy it.
 
 ### 7.1 Feasibility oracle
 
-> ✍️ **TODO(report): explain the oracle in your own words.** Facts to cover:
->
-> - Each atom gets its own register, sized by the class C rule (smallest two's-complement
-> width holding every value of the atom). Variables are qubits `0..n-1` in T1 order.
-> - `e ≤ 0` is stored as `e − 1`, so for integers "holds" ⇔ "negative" ⇔ sign bit = 1.
-> Equality atoms hold when every bit is 0.
-> - Compute → mark → uncompute, so the scratch registers return to |0⟩ and the oracle
-> is a pure phase flip on the activity qubits.
-> - Design choice: every atom, including conflicts, uses arithmetic as in class C. Cost:
-> 2 qubits per conflict or mandatory activity, which limited the instance sizes (§9).
-> - Checked on every basis assignment of the hand-checked instance against the classical
-> constraints, and by breaking it on purpose (no uncompute, no `−1`, reversed order).
+The oracle uses one qubit per activity, following the order established by T1,
+and a separate scratch register for each constraint. We size each register to
+hold every possible value of its expression in two's complement, following
+Annex A, class C. For an inequality `e <= 0`, we store `e - 1`: the constraint
+holds when that value is negative, so we can check its sign bit. For an equality
+`e = 0`, we check whether all bits in the register are zero.
+
+The circuit computes these values using QFT-based addition, applies a phase flip
+to selections that satisfy every constraint, and reverses the arithmetic to
+return the scratch registers to zero. We chose to use this same arithmetic
+approach for every constraint, including conflicts. This keeps the construction
+consistent, but costs two scratch qubits per conflict or mandatory activity and
+limits the instances we can simulate (§9). We tested the oracle against the
+classical constraints for every assignment of the hand-checked example. We also
+checked that the validation tests fail if we remove uncomputation, omit the
+inequality shift or reverse the qubit order.
 
 
 | Step      | What it does                                                          | Reference             |
@@ -338,31 +342,37 @@ Oracle calls = Σ over rounds of k × shots.
 | large         | 20     | 512             | 10/10                 | 29                              | 93.3                      | 54.7          |
 
 
-> ✍️ **TODO(report): interpret the results in your own words.** Facts to cover:
->
-> - Every measured probability matches the formula within sampling error; this checks
-> marking, the `−1` shift, uncomputation, diffusion and qubit order together.
-> - Every GAS run returned an exact optimum (any of the four for multi_optima) and never
-> reported a selection for the infeasible instance.
-> - Small instances: 0 oracle calls before the answer, because the adaptive window starts
-> at k = 0 and random sampling already finds the optimum when N ≤ 32.
-> - Large: ~29 oracle calls before the answer, close to √512 ≈ 23 (Dürr–Høyer's O(√N)),
-> versus 512 brute-force evaluations. Most of the total is the 20-round stopping tail.
-> - Over-rotation: in tiny, one iteration takes P(valid) from 0.75 to 0, which is why the
-> number of iterations is randomised.
+The measured amplification probabilities are close to the theoretical values,
+within sampling error. This gives us confidence that the oracle, diffusion and
+qubit ordering work together as intended. In our ten seeded GAS runs per instance,
+every feasible instance returned an exact optimum. The infeasible instance never
+returned a selection, although that observation alone does not prove infeasibility.
+
+For the smaller instances, the median number of oracle calls before finding the
+answer was zero. The search starts with `k = 0`, and random sampling was often
+enough to find an optimum in these small search spaces. For the large instance,
+the median was 29 calls before finding the answer; exhaustive enumeration checks
+512 candidates. Most of the remaining calls came from the stopping period. These
+small experiments do not demonstrate a practical quantum advantage.
+
+The tiny instance also illustrates over-rotation: one Grover iteration reduces
+the probability of a valid selection from 0.75 to 0. We vary the number of
+iterations because we do not know how many selections are marked in advance.
 
 ## 11. Limitations
 
-> ✍️ **TODO(report): limitations in your own words.** Facts to cover:
->
-> - A bounded search proves neither optimality nor infeasibility; only the classical
-> baseline does.
-> - 2 qubits per conflict/mandatory atom plus ~5 for the threshold: 20 qubits allows about
-> 9 activities with few conflicts. All instances are trivial for brute force
-> (Annex A, final remarks). Alternative not pursued: a Toffoli-style ancilla per conflict.
-> - Ideal statevector simulation only: no noise, no real hardware, no depth optimisation.
-> - 10 seeds per instance give coarse success-rate estimates.
-> - Generated code uses Qiskit's deprecated `QFT` class (removed in Qiskit 3).
+Stopping after a limited number of rounds does not prove that the best selection
+found is optimal, or that an instance is infeasible. For these examples, we rely
+on exhaustive classical enumeration to establish the exact answer. The scratch
+registers also make larger instances expensive: each conflict or mandatory
+activity uses two qubits, and the threshold needs another register. We therefore
+kept our instances within roughly 20 qubits, making them easy to solve classically.
+
+We ran the experiments on an ideal simulator, without noise, and did not optimise
+circuit depth or run on real quantum hardware. With only ten seeds per instance,
+the measured success rates are also rough estimates. Finally, the generated code
+uses Qiskit's deprecated `QFT` class, so we restrict the dependency to Qiskit
+2.x; the class is removed in Qiskit 3.
 
 ## 12. Running Part II
 
