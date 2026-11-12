@@ -300,13 +300,6 @@ threshold register. Each conflict costs a 2-qubit register, so the instances are
 stay within the ~20-qubit simulation limit of Annex A. In this case, `medium_conference` is the hand-checked
 example of Section 3.
 
-<!-- > ✍️ **TODO(report): a few sentences on how the instances were chosen.** Facts to cover:
-> - Annex A asks for a tiny instance, a medium one, one near ~20 qubits, one with several
->   optima and one with none; this set covers all five.
-> - The first versions of medium/large needed 27 qubits and did not finish simulating.
->   We reduced conflicts and values instead of changing the transformations, and renamed
->   the old tiny example (15 qubits) to medium. -->
-
 As asked in Annex A, a set of five different test cases is presented, where each one covers a different case: three of them differ from each other in size (8, 15 and 20 qubits), while the remaining two differ because they either have no feasible selection or, instead, have more than one optimal solution. Together, they check that: the chain stays correct as the size grows, that any of several optima is accepted and that nothing is reported when no feasible selection exists.
 
 Initially, both the medium and the large test cases exceeded the suggested limit of about 20 qubits, which required us to redesign them. To downsize those test cases, we opted for the removal of some conflicts and smaller activity values (which shrink the threshold register), so that the transformations did not need to change. We also turned the previous tiny example into the medium one and added a new tiny instance.
